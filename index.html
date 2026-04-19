@@ -340,7 +340,7 @@ function setBeat(n, btn) {
 function setBPM(v) {
   bpm = parseInt(v);
   document.getElementById('bpm-val').textContent = bpm;
-  if (isPlaying) { clearInterval(timerID); startTimer(); }
+  if (isPlaying) { clearTimeout(timerID); startTimer(); }
 }
 
 function getStepInterval() {
@@ -402,26 +402,48 @@ function playHihat(t) {
   noise.connect(filter); filter.connect(g); g.connect(audioCtx.destination); noise.start(t);
 }
 
-function tickStep() {
-  const n = getStepCount();
+// Lookahead scheduler - schedules audio ahead of time for accurate timing
+const LOOKAHEAD = 0.1;    // seconds to schedule ahead
+const SCHEDULE_INTERVAL = 25; // ms between scheduler runs
+
+let nextStepTime = 0;
+
+function scheduleStep(stepIdx, time) {
   const steps = currentSteps();
-  const led = document.getElementById('beat-led');
-  const thisStep = currentStep;
-  DRUMS.forEach(drum => { const cell = document.getElementById(`cell-${drum.id}-${thisStep}`); if(cell) cell.classList.add('current'); });
-  led.classList.add('active');
+  if(steps.bd[stepIdx]) playKick(time);
+  if(steps.sn[stepIdx]) playSnare(time);
+  if(steps.hh[stepIdx]) playHihat(time);
+
+  // Schedule UI update to fire when audio actually plays
+  const delay = (time - audioCtx.currentTime) * 1000;
+  const thisStep = stepIdx;
+  const stepDuration = getStepInterval();
   setTimeout(() => {
-    DRUMS.forEach(drum => { const cell = document.getElementById(`cell-${drum.id}-${thisStep}`); if(cell) cell.classList.remove('current'); });
-    led.classList.remove('active');
-  }, Math.min(getStepInterval()*0.8, 120));
-  const now = audioCtx.currentTime;
-  if(steps.bd[currentStep]) playKick(now);
-  if(steps.sn[currentStep]) playSnare(now);
-  if(steps.hh[currentStep]) playHihat(now);
-  currentStep = (currentStep+1) % n;
+    const led = document.getElementById('beat-led');
+    DRUMS.forEach(drum => { const cell = document.getElementById(`cell-${drum.id}-${thisStep}`); if(cell) cell.classList.add('current'); });
+    led.classList.add('active');
+    setTimeout(() => {
+      DRUMS.forEach(drum => { const cell = document.getElementById(`cell-${drum.id}-${thisStep}`); if(cell) cell.classList.remove('current'); });
+      led.classList.remove('active');
+    }, Math.min(stepDuration * 0.8, 120));
+  }, Math.max(0, delay));
 }
 
-function startTimer() { timerID = setInterval(tickStep, getStepInterval()); }
+function scheduler() {
+  const n = getStepCount();
+  const stepSecs = getStepInterval() / 1000;
+  while (nextStepTime < audioCtx.currentTime + LOOKAHEAD) {
+    scheduleStep(currentStep, nextStepTime);
+    nextStepTime += stepSecs;
+    currentStep = (currentStep + 1) % n;
+  }
+  timerID = setTimeout(scheduler, SCHEDULE_INTERVAL);
+}
 
+function startTimer() {
+  nextStepTime = audioCtx.currentTime + 0.05;
+  scheduler();
+}
 function togglePlay() {
   initAudio();
   if(audioCtx.state==='suspended') audioCtx.resume();
@@ -437,7 +459,7 @@ function togglePlay() {
     btn.classList.remove('playing');
     document.body.classList.remove('playing');
     icon.innerHTML = '<polygon points="5,2 18,10 5,18"/>';
-    clearInterval(timerID);
+    clearTimeout(timerID);
     document.querySelectorAll('.cell').forEach(c => c.classList.remove('current'));
     document.getElementById('beat-led').classList.remove('active');
   }
