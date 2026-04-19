@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#1a1a1a">
-  <title>DRUM MACHINE</title>
+  <title>METRO DRUM MACHINE</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -28,6 +28,9 @@ body { background: transparent; background-color:#000;}
 .beat-btn.selected { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
 .bpm-wrap { display: flex; align-items: center; gap: 10px; }
 .bpm-val { font-size: 22px; color: var(--text-primary); min-width: 52px; text-align: right; letter-spacing: 1px; }
+.bpm-adj { width: 28px; height: 28px; border-radius: 6px; border: 1px solid #444; background: var(--bg-cell); color: var(--text-primary); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.1s; }
+.bpm-adj:hover { background: #3a3a3a; border-color: #666; }
+.bpm-adj:active { background: var(--accent); color: #000; border-color: var(--accent); }
 input[type=range] { -webkit-appearance: none; width: 130px; height: 4px; background: #444; border-radius: 2px; outline: none; }
 input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--accent); cursor: pointer; }
 .grid-section { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
@@ -81,7 +84,6 @@ body.playing .cell.on-hh.current { background: #2dcc97; border-color: #147a5c; b
   <div class="preset-row" id="preset-row"></div>
   <div class="controls-row">
     <div class="ctrl-group">
-      <span class="ctrl-label">Beat</span>
       <div class="beat-btns">
         <button class="beat-btn selected" onclick="setBeat(4,this)">4</button>
         <button class="beat-btn" onclick="setBeat(8,this)">8</button>
@@ -89,10 +91,14 @@ body.playing .cell.on-hh.current { background: #2dcc97; border-color: #147a5c; b
       </div>
     </div>
     <div class="ctrl-group" style="flex:1;">
-      <span class="ctrl-label">BPM</span>
       <div class="bpm-wrap">
-        <span class="bpm-val" id="bpm-val">120</span>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;">
+          <span class="ctrl-label">BPM</span>
+          <span class="bpm-val" id="bpm-val">120</span>
+        </div>
+        <button class="bpm-adj" onclick="setBPM(bpm-1)">−</button>
         <input type="range" min="40" max="240" value="120" step="1" id="bpm-slider" oninput="setBPM(this.value)" style="flex:1;"/>
+        <button class="bpm-adj" onclick="setBPM(bpm+1)">+</button>
       </div>
     </div>
   </div>
@@ -337,8 +343,9 @@ function setBeat(n, btn) {
 }
 
 function setBPM(v) {
-  bpm = parseInt(v);
+  bpm = Math.min(240, Math.max(40, parseInt(v)));
   document.getElementById('bpm-val').textContent = bpm;
+  document.getElementById('bpm-slider').value = bpm;
   if (isPlaying) { clearTimeout(timerID); startTimer(); }
 }
 
