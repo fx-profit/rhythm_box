@@ -39,10 +39,13 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px;
 .beat-group { display: flex; gap: 3px; flex: 1; }
 .cell { flex: 1; height: 38px; border-radius: 6px; background: var(--bg-cell); border: 1px solid #3a3a3a; cursor: pointer; transition: all 0.08s; position: relative; overflow: hidden; }
 .cell:hover { border-color: #666; background: #363636; }
-.cell.on-bd { background: var(--bd); border-color: #c43d3d; }
-.cell.on-sn { background: var(--sn); border-color: #2a6ab0; }
-.cell.on-hh { background: var(--hh); border-color: #147a5c; }
-.cell.current::after { content: ''; position: absolute; inset: 0; background: rgba(255,255,255,0.25); border-radius: 5px; }
+.cell.on-bd { background: #8a2d2c; border-color: #7a2828; }
+.cell.on-sn { background: #1e4f7a; border-color: #1a4268; }
+.cell.on-hh { background: #0f5c42; border-color: #0d4e38; }
+.cell.on-bd.current { background: #ff6b6a; border-color: #ff4444; box-shadow: 0 0 8px rgba(226,75,74,0.7); }
+.cell.on-sn.current { background: #5ba3e8; border-color: #3d8fd4; box-shadow: 0 0 8px rgba(55,138,221,0.7); }
+.cell.on-hh.current { background: #2dcc97; border-color: #1aaa7a; box-shadow: 0 0 8px rgba(29,158,117,0.7); }
+.cell.current:not(.on-bd):not(.on-sn):not(.on-hh)::after { content: ''; position: absolute; inset: 0; background: rgba(255,255,255,0.12); border-radius: 5px; }
 .group-div { width: 1px; background: #444; align-self: stretch; flex-shrink: 0; }
 .vol-row { display: flex; gap: 16px; padding-top: 12px; border-top: 1px solid #333; flex-wrap: wrap; margin-bottom: 14px; }
 .vol-item { display: flex; align-items: center; gap: 8px; }
@@ -400,10 +403,11 @@ function tickStep() {
   const n = getStepCount();
   const steps = currentSteps();
   const led = document.getElementById('beat-led');
-  DRUMS.forEach(drum => { const cell = document.getElementById(`cell-${drum.id}-${currentStep}`); if(cell) cell.classList.add('current'); });
+  const thisStep = currentStep;
+  DRUMS.forEach(drum => { const cell = document.getElementById(`cell-${drum.id}-${thisStep}`); if(cell) cell.classList.add('current'); });
   led.classList.add('active');
   setTimeout(() => {
-    DRUMS.forEach(drum => { const cell = document.getElementById(`cell-${drum.id}-${currentStep}`); if(cell) cell.classList.remove('current'); });
+    DRUMS.forEach(drum => { const cell = document.getElementById(`cell-${drum.id}-${thisStep}`); if(cell) cell.classList.remove('current'); });
     led.classList.remove('active');
   }, Math.min(getStepInterval()*0.8, 120));
   const now = audioCtx.currentTime;
