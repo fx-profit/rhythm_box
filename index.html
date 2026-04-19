@@ -19,16 +19,16 @@ body { background: transparent; background-color:#000;}
 .dm-wrap { background: var(--bg-main); padding: 20px; color: var(--text-primary); user-select: none; border: 1px solid #333; }
 .dm-led { width: 10px; height: 10px; border-radius: 50%; background: #333; transition: background 0.05s, box-shadow 0.05s; display: inline-block; }
 .dm-led.active { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
-.controls-row { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
-.ctrl-group { display: flex; flex-direction: column; gap: 6px; }
+.controls-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: nowrap; }
+.ctrl-group { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
 .ctrl-label { font-size: 10px; letter-spacing: 2px; color: var(--text-muted); text-transform: uppercase; }
-.beat-btns { display: flex; gap: 4px; }
-.beat-btn { background: var(--bg-cell); border: 1px solid #444; border-radius: 6px; color: var(--text-primary); font-size: 13px; padding: 6px 14px; cursor: pointer; transition: all 0.1s; }
+.beat-btns { display: flex; gap: 3px; }
+.beat-btn { background: var(--bg-cell); border: 1px solid #444; border-radius: 6px; color: var(--text-primary); font-size: 13px; padding: 6px 10px; cursor: pointer; transition: all 0.1s; }
 .beat-btn:hover { background: #3a3a3a; border-color: #666; }
 .beat-btn.selected { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
-.bpm-wrap { display: flex; align-items: center; gap: 10px; }
-.bpm-val { font-size: 22px; color: var(--text-primary); min-width: 52px; text-align: right; letter-spacing: 1px; }
-.bpm-adj { width: 28px; height: 28px; border-radius: 6px; border: 1px solid #444; background: var(--bg-cell); color: var(--text-primary); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.1s; }
+.bpm-wrap { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.bpm-val { font-size: 22px; color: var(--text-primary); min-width: 44px; text-align: right; letter-spacing: 1px; }
+.bpm-adj { width: 26px; height: 26px; border-radius: 6px; border: 1px solid #444; background: var(--bg-cell); color: var(--text-primary); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.1s; }
 .bpm-adj:hover { background: #3a3a3a; border-color: #666; }
 .bpm-adj:active { background: var(--accent); color: #000; border-color: var(--accent); }
 input[type=range] { -webkit-appearance: none; width: 130px; height: 4px; background: #444; border-radius: 2px; outline: none; }
