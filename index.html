@@ -40,35 +40,15 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px;
 .vol-item { display: flex; align-items: center; gap: 8px; }
 .vol-item label { font-size: 10px; letter-spacing: 1.5px; color: var(--text-muted); width: 28px; text-transform: uppercase; }
 .vol-slider { width: 80px; }
-
 .preset-row { display: flex; gap: 6px; margin-bottom: 16px; }
 .preset-btn-wrap { flex: 1; position: relative; }
-.preset-btn {
-  width: 100%; background: var(--bg-cell); border: 1px solid #444; border-radius: 8px;
-  color: var(--text-muted); font-family: 'DM Mono', monospace; font-size: 11px;
-  letter-spacing: 1px; padding: 8px 4px; cursor: pointer; transition: border-color 0.1s, color 0.1s, background 0.1s;
-  text-align: center; position: relative; overflow: hidden;
-}
+.preset-btn { width: 100%; background: var(--bg-cell); border: 1px solid #444; border-radius: 8px; color: var(--text-muted); font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 1px; padding: 8px 4px; cursor: pointer; transition: border-color 0.1s, color 0.1s, background 0.1s; text-align: center; position: relative; overflow: hidden; }
 .preset-btn:hover { background: #3a3a3a; border-color: #666; color: var(--text-primary); }
 .preset-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(239,159,39,0.08); }
-.preset-btn.saved { border-color: #1D9E75; }
 .preset-btn.holding { border-color: #E24B4A !important; color: #E24B4A !important; }
-
-.hold-bar {
-  position: absolute; bottom: 0; left: 0; height: 3px;
-  background: #E24B4A; width: 0%; border-radius: 0 0 8px 8px;
-  transition: none; pointer-events: none;
-}
-
-.toast {
-  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-  background: #2a2a2a; border: 1px solid #444; border-radius: 8px;
-  padding: 8px 18px; font-size: 12px; color: var(--text-primary);
-  letter-spacing: 1px; opacity: 0; pointer-events: none;
-  transition: opacity 0.2s; white-space: nowrap; z-index: 99;
-}
+.hold-bar { position: absolute; bottom: 0; left: 0; height: 3px; background: #E24B4A; width: 0%; border-radius: 0 0 8px 8px; pointer-events: none; }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #2a2a2a; border: 1px solid #444; border-radius: 8px; padding: 8px 18px; font-size: 12px; color: var(--text-primary); letter-spacing: 1px; opacity: 0; pointer-events: none; transition: opacity 0.2s; white-space: nowrap; z-index: 99; }
 .toast.show { opacity: 1; }
-
 .footer { display: flex; flex-direction: column; align-items: center; gap: 8px; padding-top: 14px; border-top: 1px solid #333; }
 .rb-title { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 3px; color: var(--accent); display: flex; align-items: center; gap: 8px; }
 .play-btn { width: 52px; height: 52px; border-radius: 50%; border: 2px solid var(--accent); background: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.1s; color: var(--accent); }
@@ -78,7 +58,6 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px;
 
 <div class="rb-wrap">
   <div class="preset-row" id="preset-row"></div>
-
   <div class="controls-row">
     <div class="ctrl-group">
       <span class="ctrl-label">Beat</span>
@@ -96,9 +75,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px;
       </div>
     </div>
   </div>
-
   <div class="grid-section" id="grid-section"></div>
-
   <div class="vol-row">
     <div class="vol-item">
       <label style="color:var(--hh);">HH</label>
@@ -113,7 +90,6 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px;
       <input type="range" class="vol-slider" min="0" max="1" step="0.01" value="0.9" id="vol-bd" oninput="updateVol()">
     </div>
   </div>
-
   <div class="footer">
     <button class="play-btn" id="play-btn" onclick="togglePlay()">
       <svg id="play-icon" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
@@ -123,10 +99,10 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px;
     <div class="rb-title">Rhythm Box <span class="rb-led" id="beat-led"></span></div>
   </div>
 </div>
-
 <div class="toast" id="toast"></div>
 
 <script>
+const LS_KEY = 'rhythmbox_presets_v1';
 let audioCtx, isPlaying = false, currentStep = 0, timerID = null;
 let beatMode = 4, bpm = 120;
 let vols = { hh: 0.7, bd: 0.9, sn: 0.8 };
@@ -153,13 +129,20 @@ const DEFAULT_PRESETS = [
   { bpm:120, 4:{hh:[0,0,0,0],sn:[0,0,0,0],bd:[0,0,0,0]}, 8:{hh:Array(8).fill(0),sn:Array(8).fill(0),bd:Array(8).fill(0)}, 16:{hh:Array(16).fill(0),sn:Array(16).fill(0),bd:Array(16).fill(0)} },
 ];
 
-// メモリ上のプリセットストレージ（セッション中保持）
-let savedPresets = DEFAULT_PRESETS.map(p => JSON.parse(JSON.stringify(p)));
+// localStorage からロード、なければデフォルト使用
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return JSON.parse(JSON.stringify(DEFAULT_PRESETS));
+}
 
-// 長押し管理
-const HOLD_DURATION = 800;
-let holdTimers = {};
-let holdIntervals = {};
+function saveToStorage() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(savedPresets)); } catch(e) {}
+}
+
+let savedPresets = loadFromStorage();
 
 function showToast(msg) {
   const t = document.getElementById('toast');
@@ -168,41 +151,37 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 1800);
 }
 
+const HOLD_DURATION = 800;
+let holdIntervals = {};
+
 function buildPresetRow() {
   const row = document.getElementById('preset-row');
   row.innerHTML = '';
   for (let i = 0; i < 5; i++) {
     const wrap = document.createElement('div');
     wrap.className = 'preset-btn-wrap';
-
     const btn = document.createElement('button');
     btn.className = 'preset-btn' + (i === activePreset ? ' active' : '');
     btn.id = `preset-btn-${i}`;
     btn.textContent = '0' + (i + 1);
-
     const bar = document.createElement('div');
     bar.className = 'hold-bar';
     bar.id = `hold-bar-${i}`;
     btn.appendChild(bar);
 
-    // タップ（クリック）→ロード
     btn.addEventListener('click', () => loadPreset(i));
 
-    // 長押し開始
     const startHold = (e) => {
       e.preventDefault();
       let elapsed = 0;
       const bar = document.getElementById(`hold-bar-${i}`);
       btn.classList.add('holding');
-      bar.style.transition = 'none';
       bar.style.width = '0%';
-
       holdIntervals[i] = setInterval(() => {
         elapsed += 30;
         bar.style.width = Math.min((elapsed / HOLD_DURATION) * 100, 100) + '%';
         if (elapsed >= HOLD_DURATION) {
           clearInterval(holdIntervals[i]);
-          clearTimeout(holdTimers[i]);
           savePreset(i);
           btn.classList.remove('holding');
           bar.style.width = '0%';
@@ -211,10 +190,7 @@ function buildPresetRow() {
     };
 
     const endHold = () => {
-      if (holdIntervals[i]) {
-        clearInterval(holdIntervals[i]);
-        holdIntervals[i] = null;
-      }
+      if (holdIntervals[i]) { clearInterval(holdIntervals[i]); holdIntervals[i] = null; }
       const bar = document.getElementById(`hold-bar-${i}`);
       btn.classList.remove('holding');
       bar.style.width = '0%';
@@ -239,31 +215,24 @@ function savePreset(idx) {
     8:  { hh:[...allSteps[8].hh],  sn:[...allSteps[8].sn],  bd:[...allSteps[8].bd]  },
     16: { hh:[...allSteps[16].hh], sn:[...allSteps[16].sn], bd:[...allSteps[16].bd] },
   };
+  saveToStorage();
   showToast('SAVED TO 0' + (idx + 1));
-
-  // 保存フラッシュ
   const btn = document.getElementById(`preset-btn-${idx}`);
   btn.style.background = 'rgba(29,158,117,0.2)';
   btn.style.borderColor = '#1D9E75';
-  setTimeout(() => {
-    btn.style.background = '';
-    btn.style.borderColor = '';
-  }, 600);
+  setTimeout(() => { btn.style.background = ''; btn.style.borderColor = ''; }, 600);
 }
 
 function loadPreset(idx) {
   activePreset = idx;
   document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
   document.getElementById(`preset-btn-${idx}`).classList.add('active');
-
   const p = savedPresets[idx];
   bpm = p.bpm;
   document.getElementById('bpm-val').textContent = bpm;
   document.getElementById('bpm-slider').value = bpm;
   [4, 8, 16].forEach(mode => {
-    ['hh','sn','bd'].forEach(d => {
-      allSteps[mode][d] = p[mode][d].map(v => !!v);
-    });
+    ['hh','sn','bd'].forEach(d => { allSteps[mode][d] = p[mode][d].map(v => !!v); });
   });
   if (isPlaying) { clearInterval(timerID); currentStep = 0; startTimer(); }
   buildGrid();
@@ -347,86 +316,86 @@ function initAudio() {
 
 function playKick(t) {
   const g = audioCtx.createGain();
-  g.gain.setValueAtTime(vols.bd*1.2, t); g.gain.exponentialRampToValueAtTime(0.001, t+0.5);
+  g.gain.setValueAtTime(vols.bd*1.2,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.5);
   g.connect(audioCtx.destination);
   const osc = audioCtx.createOscillator();
-  osc.frequency.setValueAtTime(160, t); osc.frequency.exponentialRampToValueAtTime(40, t+0.15);
+  osc.frequency.setValueAtTime(160,t); osc.frequency.exponentialRampToValueAtTime(40,t+0.15);
   osc.connect(g); osc.start(t); osc.stop(t+0.5);
   const noise = audioCtx.createBufferSource();
-  const buf = audioCtx.createBuffer(1, audioCtx.sampleRate*0.05, audioCtx.sampleRate);
+  const buf = audioCtx.createBuffer(1,audioCtx.sampleRate*0.05,audioCtx.sampleRate);
   const d = buf.getChannelData(0);
   for (let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.3;
   noise.buffer=buf;
-  const ng=audioCtx.createGain();
+  const ng = audioCtx.createGain();
   ng.gain.setValueAtTime(vols.bd*0.4,t); ng.gain.exponentialRampToValueAtTime(0.001,t+0.05);
   noise.connect(ng); ng.connect(audioCtx.destination); noise.start(t);
 }
 
 function playSnare(t) {
-  const noise=audioCtx.createBufferSource();
-  const buf=audioCtx.createBuffer(1,audioCtx.sampleRate*0.2,audioCtx.sampleRate);
-  const d=buf.getChannelData(0);
+  const noise = audioCtx.createBufferSource();
+  const buf = audioCtx.createBuffer(1,audioCtx.sampleRate*0.2,audioCtx.sampleRate);
+  const d = buf.getChannelData(0);
   for (let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
   noise.buffer=buf;
-  const filter=audioCtx.createBiquadFilter();
+  const filter = audioCtx.createBiquadFilter();
   filter.type='highpass'; filter.frequency.value=1000;
-  const g=audioCtx.createGain();
+  const g = audioCtx.createGain();
   g.gain.setValueAtTime(vols.sn*0.8,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.2);
   noise.connect(filter); filter.connect(g); g.connect(audioCtx.destination); noise.start(t);
-  const osc=audioCtx.createOscillator();
+  const osc = audioCtx.createOscillator();
   osc.frequency.setValueAtTime(200,t); osc.frequency.exponentialRampToValueAtTime(100,t+0.1);
-  const og=audioCtx.createGain();
+  const og = audioCtx.createGain();
   og.gain.setValueAtTime(vols.sn*0.5,t); og.gain.exponentialRampToValueAtTime(0.001,t+0.1);
   osc.connect(og); og.connect(audioCtx.destination); osc.start(t); osc.stop(t+0.1);
 }
 
 function playHihat(t) {
-  const noise=audioCtx.createBufferSource();
-  const buf=audioCtx.createBuffer(1,audioCtx.sampleRate*0.08,audioCtx.sampleRate);
-  const d=buf.getChannelData(0);
+  const noise = audioCtx.createBufferSource();
+  const buf = audioCtx.createBuffer(1,audioCtx.sampleRate*0.08,audioCtx.sampleRate);
+  const d = buf.getChannelData(0);
   for (let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
   noise.buffer=buf;
-  const filter=audioCtx.createBiquadFilter();
+  const filter = audioCtx.createBiquadFilter();
   filter.type='highpass'; filter.frequency.value=7000;
-  const g=audioCtx.createGain();
+  const g = audioCtx.createGain();
   g.gain.setValueAtTime(vols.hh*0.6,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.06);
   noise.connect(filter); filter.connect(g); g.connect(audioCtx.destination); noise.start(t);
 }
 
 function tickStep() {
-  const n=getStepCount();
-  const steps=currentSteps();
-  const led=document.getElementById('beat-led');
-  DRUMS.forEach(drum=>{const cell=document.getElementById(`cell-${drum.id}-${currentStep}`);if(cell)cell.classList.add('current');});
+  const n = getStepCount();
+  const steps = currentSteps();
+  const led = document.getElementById('beat-led');
+  DRUMS.forEach(drum => { const cell = document.getElementById(`cell-${drum.id}-${currentStep}`); if(cell) cell.classList.add('current'); });
   led.classList.add('active');
-  setTimeout(()=>{
-    DRUMS.forEach(drum=>{const cell=document.getElementById(`cell-${drum.id}-${currentStep}`);if(cell)cell.classList.remove('current');});
+  setTimeout(() => {
+    DRUMS.forEach(drum => { const cell = document.getElementById(`cell-${drum.id}-${currentStep}`); if(cell) cell.classList.remove('current'); });
     led.classList.remove('active');
-  }, Math.min(getStepInterval()*0.8,120));
-  const now=audioCtx.currentTime;
+  }, Math.min(getStepInterval()*0.8, 120));
+  const now = audioCtx.currentTime;
   if(steps.bd[currentStep]) playKick(now);
   if(steps.sn[currentStep]) playSnare(now);
   if(steps.hh[currentStep]) playHihat(now);
-  currentStep=(currentStep+1)%n;
+  currentStep = (currentStep+1) % n;
 }
 
-function startTimer() { timerID=setInterval(tickStep,getStepInterval()); }
+function startTimer() { timerID = setInterval(tickStep, getStepInterval()); }
 
 function togglePlay() {
   initAudio();
   if(audioCtx.state==='suspended') audioCtx.resume();
-  isPlaying=!isPlaying;
-  const btn=document.getElementById('play-btn');
-  const icon=document.getElementById('play-icon');
-  if(isPlaying){
+  isPlaying = !isPlaying;
+  const btn = document.getElementById('play-btn');
+  const icon = document.getElementById('play-icon');
+  if(isPlaying) {
     btn.classList.add('playing');
-    icon.innerHTML='<rect x="3" y="2" width="5" height="16" rx="1"/><rect x="12" y="2" width="5" height="16" rx="1"/>';
-    currentStep=0; startTimer();
+    icon.innerHTML = '<rect x="3" y="2" width="5" height="16" rx="1"/><rect x="12" y="2" width="5" height="16" rx="1"/>';
+    currentStep = 0; startTimer();
   } else {
     btn.classList.remove('playing');
-    icon.innerHTML='<polygon points="5,2 18,10 5,18"/>';
+    icon.innerHTML = '<polygon points="5,2 18,10 5,18"/>';
     clearInterval(timerID);
-    document.querySelectorAll('.cell').forEach(c=>c.classList.remove('current'));
+    document.querySelectorAll('.cell').forEach(c => c.classList.remove('current'));
     document.getElementById('beat-led').classList.remove('active');
   }
 }
