@@ -55,7 +55,8 @@ body.playing .cell.on-hh.current { background: #2dcc97; border-color: #147a5c; b
 .group-div { width: 1px; background: #444; align-self: stretch; flex-shrink: 0; }
 .vol-row { display: flex; gap: 16px; padding-top: 12px; border-top: 1px solid #333; flex-wrap: wrap; margin-bottom: 14px; }
 .vol-item { display: flex; align-items: center; gap: 8px; }
-.vol-item label { font-size: 10px; letter-spacing: 1.5px; color: var(--text-muted); width: 28px; text-transform: uppercase; }
+.vol-item label { font-size: 10px; letter-spacing: 1.5px; color: var(--text-muted); width: 36px; text-transform: uppercase; display: flex; align-items: center; gap: 4px; }
+.vol-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 .vol-slider { width: 80px; }
 .preset-row { display: flex; gap: 6px; margin-bottom: 16px; }
 .preset-btn-wrap { flex: 1; position: relative; }
@@ -88,9 +89,9 @@ body.playing .cell.on-hh.current { background: #2dcc97; border-color: #147a5c; b
       <span class="bpm-val" id="bpm-val">120</span>
     </div>
     <div class="bpm-slider-row">
-      <button class="bpm-adj" onclick="setBPM(bpm-1)">−</button>
+      <button class="bpm-adj" id="bpm-dec">−</button>
       <input type="range" min="40" max="240" value="120" step="1" id="bpm-slider" oninput="setBPM(this.value)" style="flex:1;"/>
-      <button class="bpm-adj" onclick="setBPM(bpm+1)">+</button>
+      <button class="bpm-adj" id="bpm-inc">+</button>
     </div>
     <div class="beat-btns">
       <button class="beat-btn selected" onclick="setBeat(4,this)">4</button>
@@ -101,15 +102,15 @@ body.playing .cell.on-hh.current { background: #2dcc97; border-color: #147a5c; b
   <div class="grid-section" id="grid-section"></div>
   <div class="vol-row">
     <div class="vol-item">
-      <label style="color:var(--hh);">HH</label>
+      <label style="color:var(--hh);"><span class="vol-dot" style="background:var(--hh);"></span>HH</label>
       <input type="range" class="vol-slider" min="0" max="1" step="0.01" value="0.7" id="vol-hh" oninput="updateVol()">
     </div>
     <div class="vol-item">
-      <label style="color:var(--sn);">SN</label>
+      <label style="color:var(--sn);"><span class="vol-dot" style="background:var(--sn);"></span>SN</label>
       <input type="range" class="vol-slider" min="0" max="1" step="0.01" value="0.8" id="vol-sn" oninput="updateVol()">
     </div>
     <div class="vol-item">
-      <label style="color:var(--bd);">BD</label>
+      <label style="color:var(--bd);"><span class="vol-dot" style="background:var(--bd);"></span>BD</label>
       <input type="range" class="vol-slider" min="0" max="1" step="0.01" value="0.9" id="vol-bd" oninput="updateVol()">
     </div>
   </div>
@@ -294,6 +295,7 @@ function buildGrid() {
     lbl.className = 'drum-label';
     lbl.innerHTML = `<span class="drum-label-abbr" style="color:${drum.color}">${drum.label}</span><div class="drum-dot" style="background:${drum.color}"></div>`;
     row.appendChild(lbl);
+    lbl.style.display = 'none';
     const wrap = document.createElement('div');
     wrap.className = 'cells-wrap';
     const groupSize = beatMode === 4 ? 1 : (beatMode === 8 ? 2 : 4);
@@ -469,6 +471,34 @@ function togglePlay() {
 
 buildPresetRow();
 loadPreset(0);
+
+// BPM long-press repeat
+function setupBpmBtn(btnId, delta) {
+  const btn = document.getElementById(btnId);
+  let holdTimer = null;
+  let repeatTimer = null;
+
+  function start() {
+    setBPM(bpm + delta);
+    holdTimer = setTimeout(() => {
+      repeatTimer = setInterval(() => setBPM(bpm + delta), 60);
+    }, 400);
+  }
+  function stop() {
+    clearTimeout(holdTimer);
+    clearInterval(repeatTimer);
+    holdTimer = null; repeatTimer = null;
+  }
+
+  btn.addEventListener('mousedown', start);
+  btn.addEventListener('touchstart', (e) => { e.preventDefault(); start(); }, { passive: false });
+  btn.addEventListener('mouseup', stop);
+  btn.addEventListener('mouseleave', stop);
+  btn.addEventListener('touchend', stop);
+  btn.addEventListener('touchcancel', stop);
+}
+setupBpmBtn('bpm-dec', -1);
+setupBpmBtn('bpm-inc', +1);
 </script>
 </body>
 </html>
