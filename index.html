@@ -8,6 +8,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#1a1a1a">
   <title>Rhythm Box</title>
+
+
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap');
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -51,8 +53,14 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px;
 .vol-slider { width: 80px; }
 .preset-row { display: flex; gap: 6px; margin-bottom: 16px; }
 .preset-btn-wrap { flex: 1; position: relative; }
-.preset-btn { width: 100%; background: var(--bg-cell); border: 1px solid #444; border-radius: 8px; color: var(--text-muted); font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 1px; padding: 8px 4px; cursor: pointer; transition: border-color 0.1s, color 0.1s, background 0.1s; text-align: center; position: relative; overflow: hidden; }
-.preset-btn:hover { background: #3a3a3a; border-color: #666; color: var(--text-primary); }
+.preset-btn {
+  width: 100%; background: var(--bg-cell); border: 1px solid #444; border-radius: 8px;
+  color: var(--text-muted); font-family: 'DM Mono', monospace; font-size: 11px;
+  letter-spacing: 1px; padding: 12px 4px; cursor: pointer;
+  transition: border-color 0.1s, color 0.1s, background 0.1s;
+  text-align: center; position: relative; overflow: hidden;
+  -webkit-tap-highlight-color: transparent; touch-action: none;
+}
 .preset-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(239,159,39,0.08); }
 .preset-btn.holding { border-color: #E24B4A !important; color: #E24B4A !important; }
 .hold-bar { position: absolute; bottom: 0; left: 0; height: 3px; background: #E24B4A; width: 0%; border-radius: 0 0 8px 8px; pointer-events: none; }
@@ -64,8 +72,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px;
 .play-btn:hover { background: rgba(239,159,39,0.1); }
 .play-btn.playing { background: var(--accent); color: #000; }
 </style>
-</head>
-<body>
+
 <div class="rb-wrap">
   <div class="preset-row" id="preset-row"></div>
   <div class="controls-row">
@@ -139,19 +146,13 @@ const DEFAULT_PRESETS = [
   { bpm:120, 4:{hh:[0,0,0,0],sn:[0,0,0,0],bd:[0,0,0,0]}, 8:{hh:Array(8).fill(0),sn:Array(8).fill(0),bd:Array(8).fill(0)}, 16:{hh:Array(16).fill(0),sn:Array(16).fill(0),bd:Array(16).fill(0)} },
 ];
 
-// localStorage からロード、なければデフォルト使用
 function loadFromStorage() {
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch(e) {}
+  try { const r = localStorage.getItem(LS_KEY); if (r) return JSON.parse(r); } catch(e) {}
   return JSON.parse(JSON.stringify(DEFAULT_PRESETS));
 }
-
 function saveToStorage() {
   try { localStorage.setItem(LS_KEY, JSON.stringify(savedPresets)); } catch(e) {}
 }
-
 let savedPresets = loadFromStorage();
 
 function showToast(msg) {
@@ -162,7 +163,9 @@ function showToast(msg) {
 }
 
 const HOLD_DURATION = 800;
+let holdTimers = {};
 let holdIntervals = {};
+let holdFired = {};  // 長押し保存が発火したか
 
 function buildPresetRow() {
   const row = document.getElementById('preset-row');
@@ -170,19 +173,19 @@ function buildPresetRow() {
   for (let i = 0; i < 5; i++) {
     const wrap = document.createElement('div');
     wrap.className = 'preset-btn-wrap';
+
     const btn = document.createElement('button');
     btn.className = 'preset-btn' + (i === activePreset ? ' active' : '');
     btn.id = `preset-btn-${i}`;
     btn.textContent = '0' + (i + 1);
+
     const bar = document.createElement('div');
     bar.className = 'hold-bar';
     bar.id = `hold-bar-${i}`;
     btn.appendChild(bar);
 
-    btn.addEventListener('click', () => loadPreset(i));
-
     const startHold = (e) => {
-      e.preventDefault();
+      holdFired[i] = false;
       let elapsed = 0;
       const bar = document.getElementById(`hold-bar-${i}`);
       btn.classList.add('holding');
@@ -192,6 +195,8 @@ function buildPresetRow() {
         bar.style.width = Math.min((elapsed / HOLD_DURATION) * 100, 100) + '%';
         if (elapsed >= HOLD_DURATION) {
           clearInterval(holdIntervals[i]);
+          holdIntervals[i] = null;
+          holdFired[i] = true;
           savePreset(i);
           btn.classList.remove('holding');
           bar.style.width = '0%';
@@ -200,18 +205,39 @@ function buildPresetRow() {
     };
 
     const endHold = () => {
-      if (holdIntervals[i]) { clearInterval(holdIntervals[i]); holdIntervals[i] = null; }
+      if (holdIntervals[i]) {
+        clearInterval(holdIntervals[i]);
+        holdIntervals[i] = null;
+      }
       const bar = document.getElementById(`hold-bar-${i}`);
       btn.classList.remove('holding');
       bar.style.width = '0%';
     };
 
+    // タッチ: touchstart で長押し開始、touchend でロード（長押し未発火時のみ）
+    btn.addEventListener('touchstart', (e) => {
+      e.preventDefault(); // スクロール干渉を防ぐ
+      startHold(e);
+    }, { passive: false });
+
+    btn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      endHold();
+      if (!holdFired[i]) loadPreset(i);  // 長押し未発火 = 短いタップ → ロード
+    }, { passive: false });
+
+    btn.addEventListener('touchcancel', (e) => {
+      endHold();
+    });
+
+    // マウス（PC）用
     btn.addEventListener('mousedown', startHold);
-    btn.addEventListener('touchstart', startHold, { passive: false });
-    btn.addEventListener('mouseup', endHold);
+    btn.addEventListener('mouseup', (e) => {
+      const wasFired = holdFired[i];
+      endHold();
+      if (!wasFired) loadPreset(i);
+    });
     btn.addEventListener('mouseleave', endHold);
-    btn.addEventListener('touchend', endHold);
-    btn.addEventListener('touchcancel', endHold);
 
     wrap.appendChild(btn);
     row.appendChild(wrap);
@@ -413,5 +439,6 @@ function togglePlay() {
 buildPresetRow();
 loadPreset(0);
 </script>
+
 </body>
 </html>
